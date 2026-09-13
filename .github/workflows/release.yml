@@ -3,8 +3,16 @@ name: Release
 on:
   push:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Published npm version to finalize (for example, 0.2.0)
+        required: true
+        type: string
 
-concurrency: release-${{ github.ref }}
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 permissions:
   contents: write
@@ -12,23 +20,119 @@ permissions:
   id-token: write
 
 jobs:
-  release:
-    name: Version or publish
+  stage:
+    name: Version or stage
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 2
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: 22
-          cache: npm
+          node-version: 24
           registry-url: 'https://registry.npmjs.org'
+      - name: Install npm with staged publishing support
+        run: npm install --global npm@11.19.1
       - run: npm ci
-      - name: Create release PR or publish to npm
+      - name: Create or update the version PR
+        id: changesets
         uses: changesets/action@ae32849d5ba541f9ae29e40e22a623bc13562f51 # v2.1.2
         with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           version-script: npx changeset version
-          publish-script: npm run release
+      - name: Check for a release version
+        id: release
+        if: steps.changesets.outputs.has-changesets == 'false'
+        shell: bash
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          current_version=$(node --print "require('./package.json').version")
+          previous_version=$(git show "$BEFORE_SHA:package.json" | jq --raw-output .version)
+
+          echo "version=$current_version" >> "$GITHUB_OUTPUT"
+          if [ "$current_version" = "$previous_version" ]; then
+            echo "stage=false" >> "$GITHUB_OUTPUT"
+            echo "Package version is unchanged; nothing to stage."
+          elif npm view "swimlib@$current_version" version >/dev/null 2>&1; then
+            echo "stage=false" >> "$GITHUB_OUTPUT"
+            echo "swimlib@$current_version is already published; nothing to stage."
+          else
+            echo "stage=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Stage package on npm
+        if: steps.release.outputs.stage == 'true'
+        run: npm run release
+      - name: Record approval instructions
+        if: steps.release.outputs.stage == 'true'
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          echo "### swimlib@$VERSION staged on npm" >> "$GITHUB_STEP_SUMMARY"
+          echo "Review and approve it in npm's Staged Packages tab, then run the Release workflow manually with version $VERSION to create the Git tag and GitHub release." >> "$GITHUB_STEP_SUMMARY"
+
+  finalize:
+    name: Finalize approved release
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          registry-url: 'https://registry.npmjs.org'
+      - name: Verify publication and locate the release commit
+        id: release
+        shell: bash
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          package_version=$(node --print "require('./package.json').version")
+          if [ "$VERSION" != "$package_version" ]; then
+            echo "Requested version $VERSION does not match package.json version $package_version." >&2
+            exit 1
+          fi
+
+          published_version=$(npm view "swimlib@$VERSION" version)
+          if [ "$published_version" != "$VERSION" ]; then
+            echo "swimlib@$VERSION is not yet published. Approve its npm stage first." >&2
+            exit 1
+          fi
+
+          release_commit=$(git log --first-parent -S "\"version\": \"$VERSION\"" --format=%H -- package.json | head -n 1)
+          if [ -z "$release_commit" ]; then
+            echo "Could not locate the commit that introduced version $VERSION." >&2
+            exit 1
+          fi
+
+          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+          echo "commit=$release_commit" >> "$GITHUB_OUTPUT"
+      - name: Create Git tag
+        shell: bash
+        env:
+          TAG: ${{ steps.release.outputs.tag }}
+          RELEASE_COMMIT: ${{ steps.release.outputs.commit }}
+        run: |
+          if git rev-parse --verify "refs/tags/$TAG" >/dev/null 2>&1; then
+            tagged_commit=$(git rev-list -n 1 "$TAG")
+            if [ "$tagged_commit" != "$RELEASE_COMMIT" ]; then
+              echo "$TAG already points to $tagged_commit, not $RELEASE_COMMIT." >&2
+              exit 1
+            fi
+          else
+            git tag --annotate "$TAG" "$RELEASE_COMMIT" --message "$TAG"
+            git push origin "$TAG"
+          fi
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.release.outputs.tag }}
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "GitHub release $TAG already exists; nothing to do."
+          else
+            gh release create "$TAG" --verify-tag --title "$TAG" --generate-notes
+          fi

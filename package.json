@@ -144,7 +144,7 @@
     "test:watch": "vitest",
     "changeset": "changeset",
     "prepublishOnly": "npm run check",
-    "release": "changeset publish"
+    "release": "npm stage publish"
   },
   "publishConfig": {
     "access": "public",
