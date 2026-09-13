@@ -1,0 +1,10 @@
+dist/
+coverage/
+old-libraries/
+node_modules/
+tests/fixtures/
+package-lock.json
+CHANGELOG.md
+# Reference format specifications — preserve verbatim (ASCII column diagrams)
+docs/formats/hytek_hy3_format.md
+docs/formats/sdifv3f.txt

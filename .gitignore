@@ -1,0 +1,9 @@
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+.DS_Store
+
+# Unsanitized Hy-Tek sample-database exports (real names/birth dates).
+# Local verification only — never commit. Sanitized versions to come.
+tests/fixtures/HytekTM8*

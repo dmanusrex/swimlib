@@ -1,0 +1,14 @@
+# Default: normalize line endings for text files
+* text=auto
+
+# Binary fixed-width formats — never touch line endings or content
+*.rec binary
+*.std binary
+*.st2 binary
+
+# Fixed-width / delimited text formats with significant CRLF line endings —
+# keep exactly as committed on every platform
+*.ev3 -text
+*.sd3 -text
+*.cl2 -text
+*.hy3 -text

@@ -1,0 +1,33 @@
+name: Feature request
+description: Suggest a new capability or improvement.
+title: '[Feature]: '
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem to solve
+      description: Describe the use case and why the existing API does not address it.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Describe the API or behavior you would like to see.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Describe workarounds or alternative designs, if any.
+
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Data privacy
+      options:
+        - label: This request contains no personal swimmer information.
+          required: true

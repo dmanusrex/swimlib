@@ -1,0 +1,52 @@
+name: Format specification correction
+description: Report an incorrect field layout, code table, checksum, or other format assumption.
+title: '[Spec]: '
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Several supported formats are proprietary or incompletely documented. Strong evidence is especially valuable. Do not attach files containing personal swimmer data.
+
+  - type: dropdown
+    id: format
+    attributes:
+      label: Format
+      options:
+        - SDIF / SD3 / CL2
+        - HY3
+        - EV3
+        - REC
+        - STD / ST2
+    validations:
+      required: true
+
+  - type: textarea
+    id: correction
+    attributes:
+      label: Proposed correction
+      description: Identify the affected record, field, offset, code, or algorithm and explain the correction.
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: Link to a public source or describe the producing software/version and anonymized observations supporting the correction.
+    validations:
+      required: true
+
+  - type: textarea
+    id: sample
+    attributes:
+      label: Synthetic example
+      description: Provide the smallest synthetic or fully anonymized bytes or record needed to verify the correction.
+      render: text
+
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Data privacy
+      options:
+        - label: Any attached or pasted data is synthetic or fully anonymized and contains no personal swimmer information.
+          required: true
