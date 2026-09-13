@@ -1,6 +1,6 @@
 {
   "name": "swimlib",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Read and write common swimming data formats: SDIF (SD3/CL2), Hy-Tek HY3, EV3 event files, REC record files, and STD/ST2 time standards.",
   "keywords": [
     "swimming",
