@@ -41,7 +41,7 @@ import { Hy3ParseError } from './records/base';
  * identifier is 'G1' — the old library's example code mapped it under 'G0'.)
  *
  * B3 is a known record type but is NOT implemented: no authoritative
- * layout exists for it. 
+ * layout exists for it.
  */
 export const RECORD_TYPES = {
   A1: FileDescription,

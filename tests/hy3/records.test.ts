@@ -254,7 +254,7 @@ describe('E1 IndividualEventRecord', () => {
   it('leaves the seed-time columns blank when no seed time is set', () => {
     // Real TM8 exports leave missing seed times blank (no 'NT' filler —
     // verified against a TM8 results export where all E1 seed columns are
-    // blank). 
+    // blank).
     const record = new IndividualEventRecord({
       swimmerId: '12',
       swimmerAbbr: 'BYBEE',
